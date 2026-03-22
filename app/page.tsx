@@ -37,7 +37,7 @@ const tools = [
   {
     name: "Analytics Dashboard",
     description: "View website traffic, engagement metrics, and content performance data.",
-    href: "https://analytics.tools.planetdetroit.org/",
+    href: "https://dashboard.tools.planetdetroit.org/",
     icon: "AD",
     color: "#515151",
   },
