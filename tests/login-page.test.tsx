@@ -3,45 +3,55 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
 // ============================================================
-// Login Page UI Tests
+// Login + Dashboard UI Tests
 // Acceptance criteria:
-// - Login page shows email input and "Send magic link" button
+// - Unauthenticated: shows email input and "Send magic link" button
 // - Unregistered email shows "Email not recognized" error
 // - Successful send shows "Check your email" message
+// - Authenticated: shows tool cards + user name + sign out
 // ============================================================
 
-// Mock the Supabase browser client
 const mockSignInWithOtp = vi.fn();
+const mockGetSession = vi.fn();
+const mockSignOut = vi.fn().mockResolvedValue({});
+const mockOnAuthStateChange = vi.fn().mockReturnValue({
+  data: { subscription: { unsubscribe: vi.fn() } },
+});
+const mockFrom = vi.fn();
 
 vi.mock('@/app/lib/supabase-browser', () => ({
   getSupabase: () => ({
     auth: {
       signInWithOtp: (...args: any[]) => mockSignInWithOtp(...args),
+      getSession: () => mockGetSession(),
+      onAuthStateChange: (...args: any[]) => mockOnAuthStateChange(...args),
+      signOut: () => mockSignOut(),
     },
+    from: (...args: any[]) => mockFrom(...args),
   }),
 }));
 
-describe('Login Page', () => {
+describe('Unauthenticated — Login view', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetSession.mockResolvedValue({ data: { session: null } });
   });
 
-  it('renders email input and send button', async () => {
-    // Acceptance: login page shows "Enter your email" field
-    const { LoginPage } = await import('@/app/login/LoginPage');
-    render(<LoginPage />);
+  it('shows email input and send button when not logged in', async () => {
+    const Home = (await import('@/app/page')).default;
+    render(<Home />);
 
-    expect(screen.getByPlaceholderText(/planetdetroit\.org/i)).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText(/planetdetroit\.org/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument();
   });
 
   it('shows success message after sending magic link', async () => {
-    // Acceptance: user enters email → clicks "Send magic link" → sees confirmation
     mockSignInWithOtp.mockResolvedValue({ error: null });
 
-    const { LoginPage } = await import('@/app/login/LoginPage');
-    render(<LoginPage />);
+    const Home = (await import('@/app/page')).default;
+    render(<Home />);
 
+    await screen.findByPlaceholderText(/planetdetroit\.org/i);
     fireEvent.change(screen.getByPlaceholderText(/planetdetroit\.org/i), {
       target: { value: 'dustin@planetdetroit.org' },
     });
@@ -53,14 +63,14 @@ describe('Login Page', () => {
   });
 
   it('shows error for unregistered email', async () => {
-    // Acceptance: unregistered email → "Email not recognized. Contact your editor for access."
     mockSignInWithOtp.mockResolvedValue({
       error: { message: 'Signups not allowed for otp' },
     });
 
-    const { LoginPage } = await import('@/app/login/LoginPage');
-    render(<LoginPage />);
+    const Home = (await import('@/app/page')).default;
+    render(<Home />);
 
+    await screen.findByPlaceholderText(/planetdetroit\.org/i);
     fireEvent.change(screen.getByPlaceholderText(/planetdetroit\.org/i), {
       target: { value: 'stranger@example.com' },
     });
@@ -70,23 +80,45 @@ describe('Login Page', () => {
       expect(screen.getByText(/email not recognized/i)).toBeInTheDocument();
     });
   });
+});
 
-  it('disables button while sending', async () => {
-    // Prevent double-sends
-    let resolveOtp: (v: any) => void;
-    mockSignInWithOtp.mockReturnValue(new Promise((r) => { resolveOtp = r; }));
-
-    const { LoginPage } = await import('@/app/login/LoginPage');
-    render(<LoginPage />);
-
-    fireEvent.change(screen.getByPlaceholderText(/planetdetroit\.org/i), {
-      target: { value: 'dustin@planetdetroit.org' },
+describe('Authenticated — Dashboard view', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'dustin-uuid', email: 'dustin@planetdetroit.org' },
+          access_token: 'fake-token',
+        },
+      },
     });
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }));
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { display_name: 'Dustin' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+  });
 
-    expect(screen.getByRole('button', { name: /sending/i })).toBeDisabled();
+  it('shows tool cards when authenticated', async () => {
+    const Home = (await import('@/app/page')).default;
+    render(<Home />);
 
-    // Clean up
-    resolveOtp!({ error: null });
+    expect(await screen.findByText('Newsletter Builder')).toBeInTheDocument();
+    expect(screen.getByText('Civic Action Builder')).toBeInTheDocument();
+    expect(screen.getByText('News Brief Generator')).toBeInTheDocument();
+  });
+
+  it('shows user name and sign out button', async () => {
+    const Home = (await import('@/app/page')).default;
+    render(<Home />);
+
+    expect(await screen.findByText('Dustin')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
 });

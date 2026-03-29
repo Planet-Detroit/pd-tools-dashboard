@@ -1,7 +1,8 @@
-import { createPdAuthClient } from 'pd-auth';
+import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Lazy singleton — avoids crash during Next.js static build when env vars aren't set
+// Use createBrowserClient from @supabase/ssr so sessions are stored in cookies
+// (not localStorage). This way the server-side proxy middleware can read them.
 let _supabase: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
@@ -11,7 +12,7 @@ export function getSupabase(): SupabaseClient {
     if (!url || !key) {
       throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
     }
-    _supabase = createPdAuthClient(url, key);
+    _supabase = createBrowserClient(url, key);
   }
   return _supabase;
 }
