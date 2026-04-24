@@ -51,7 +51,9 @@ function LoginView() {
 
     setStatus('sending');
     const supabase = getSupabase();
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next') || '/';
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),

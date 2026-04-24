@@ -1,35 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getSupabase } from '@/app/lib/supabase-browser';
 
-// Handle the magic link callback
-// createBrowserClient auto-detects the code in the URL and exchanges it
-// We just need to wait for the session to be established, then redirect
-export default function AuthCallback() {
+function CallbackHandler() {
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const supabase = getSupabase();
+    const next = searchParams.get('next') || '/';
 
-    // Listen for sign-in event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const isExternal = next.startsWith('https://') && next.includes('.tools.planetdetroit.org');
+    const destination = isExternal ? next : '/';
+
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        window.location.replace('/');
+        window.location.replace(destination);
       }
     });
 
-    // Check if session already exists
     supabase.auth.getSession().then(({ data: { session }, error: err }) => {
       if (session) {
-        window.location.replace('/');
+        window.location.replace(destination);
       } else if (err) {
         setError('Login failed. Please try again.');
       }
     });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  }, [searchParams]);
 
   if (error) {
     return (
@@ -48,5 +47,13 @@ export default function AuthCallback() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F0F0' }}>
       <p style={{ color: '#666' }}>Signing you in...</p>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F0F0' }}><p style={{ color: '#666' }}>Loading...</p></div>}>
+      <CallbackHandler />
+    </Suspense>
   );
 }
