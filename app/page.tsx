@@ -115,7 +115,7 @@ const tools = [
   { name: 'Civic Action Builder', description: 'Analyze articles to generate civic action blocks with meetings, organizations, and elected officials.', href: 'https://civic.tools.planetdetroit.org/', icon: 'CA', color: '#EA5A39' },
   { name: 'Events Manager', description: 'Create and manage events, registrations, confirmations, and event-specific social posts.', href: 'https://events.tools.planetdetroit.org/admin', icon: 'EV', color: '#EA5A39' },
   { name: 'Social Publisher', description: 'Generate and publish social media posts for any article across Bluesky, X, Facebook, Instagram, and LinkedIn.', href: 'https://social.tools.planetdetroit.org/', icon: 'SP', color: '#333333' },
-  { name: 'Analytics Dashboard', description: 'View website traffic, engagement metrics, and content performance data.', href: 'https://dashboard.tools.planetdetroit.org/', icon: 'AD', color: '#515151' },
+  { name: 'Metrics Dashboard', description: 'View website traffic, engagement metrics, and content performance data.', href: 'https://dashboard.tools.planetdetroit.org/', icon: 'MD', color: '#515151' },
 ];
 
 function DashboardView({ email }: { email: string }) {
