@@ -9,25 +9,37 @@ function CallbackHandler() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = getSupabase();
     const next = searchParams.get('next') || '/';
+    const code = searchParams.get('code');
 
     const isExternal = next.startsWith('https://') && next.includes('.tools.planetdetroit.org');
     const destination = isExternal ? next : '/';
 
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+    async function handleCallback() {
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (exchangeError) {
+          setError('Login link expired or already used. Please request a new one.');
+          return;
+        }
         window.location.replace(destination);
+        return;
       }
-    });
 
-    supabase.auth.getSession().then(({ data: { session }, error: err }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
       if (session) {
         window.location.replace(destination);
-      } else if (err) {
-        setError('Login failed. Please try again.');
+      } else {
+        setError('No login code found. Please request a new magic link.');
       }
-    });
+    }
+
+    handleCallback();
+    return () => { cancelled = true; };
   }, [searchParams]);
 
   if (error) {
@@ -35,7 +47,7 @@ function CallbackHandler() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F0F0' }}>
         <div className="text-center">
           <p className="text-sm mb-4" style={{ color: '#DC2626' }}>{error}</p>
-          <a href="/login" className="text-sm underline" style={{ color: '#2982C4' }}>
+          <a href="/" className="text-sm underline" style={{ color: '#2982C4' }}>
             Back to login
           </a>
         </div>
