@@ -43,7 +43,10 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(new URL('/?error=expired', request.url));
+    const errUrl = new URL('/', request.url);
+    errUrl.searchParams.set('error', 'expired');
+    errUrl.searchParams.set('detail', error.message || 'unknown');
+    return NextResponse.redirect(errUrl);
   }
 
   return response;

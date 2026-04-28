@@ -46,7 +46,10 @@ function LoginView() {
     if (typeof window === 'undefined') return '';
     const params = new URLSearchParams(window.location.search);
     const err = params.get('error');
-    if (err === 'expired') return 'Login link expired or already used. Please request a new one.';
+    if (err === 'expired') {
+      const detail = params.get('detail');
+      return `Login failed: ${detail || 'link expired or already used'}. Please request a new one.`;
+    }
     if (err === 'no_code') return 'Invalid login link. Please request a new one.';
     return '';
   });

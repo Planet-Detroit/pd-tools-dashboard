@@ -9,6 +9,10 @@ function isLocalDev(request: NextRequest): boolean {
 // Auth protection is handled client-side by the Dashboard component.
 // This avoids cookie/domain mismatch issues during development.
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return NextResponse.next();
+  }
+
   const response = NextResponse.next({ request });
   const local = isLocalDev(request);
 
