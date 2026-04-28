@@ -25,7 +25,9 @@ export async function proxy(request: NextRequest) {
             request.cookies.set(name, value);
             response.cookies.set(name, value, {
               ...options,
-              ...(local ? { secure: false, path: '/' } : { secure: true, path: '/' }),
+              ...(local
+              ? { secure: false, path: '/' }
+              : { domain: '.tools.planetdetroit.org', sameSite: 'lax' as const, secure: true, httpOnly: true, path: '/' }),
             });
           }
         },
