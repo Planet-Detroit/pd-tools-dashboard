@@ -2,7 +2,17 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getSupabase } from '@/app/lib/supabase-browser';
+import { createBrowserClient } from '@supabase/ssr';
+
+function clearStaleSessionCookies() {
+  document.cookie.split(';').forEach(cookie => {
+    const name = cookie.split('=')[0].trim();
+    if (name.startsWith('sb-') && !name.includes('code-verifier')) {
+      document.cookie = `${name}=; domain=.tools.planetdetroit.org; path=/; max-age=0`;
+      document.cookie = `${name}=; path=/; max-age=0`;
+    }
+  });
+}
 
 function CallbackHandler() {
   const [error, setError] = useState<string | null>(null);
@@ -10,29 +20,39 @@ function CallbackHandler() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = getSupabase();
     const next = searchParams.get('next') || '/';
 
     const isExternal = next.startsWith('https://') && next.includes('.tools.planetdetroit.org');
     const destination = isExternal ? next : '/';
+
+    clearStaleSessionCookies();
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        isSingleton: false,
+        cookieOptions: {
+          domain: '.tools.planetdetroit.org',
+          sameSite: 'lax',
+          secure: true,
+        },
+      }
+    );
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       if (event === 'SIGNED_IN' && session) {
         window.location.replace(destination);
       }
-    });
-
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        setError('Login link may have expired. Please request a new one.');
+      if (event === 'INITIAL_SESSION' && !session) {
+        setError('Login link expired or already used. Please request a new one.');
       }
-    }, 10000);
+    });
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, [searchParams]);
 
