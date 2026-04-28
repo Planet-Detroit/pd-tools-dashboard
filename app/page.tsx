@@ -42,8 +42,16 @@ export default function Home() {
 // ---- Login View ----
 function LoginView() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [callbackError] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    if (err === 'expired') return 'Login link expired or already used. Please request a new one.';
+    if (err === 'no_code') return 'Invalid login link. Please request a new one.';
+    return '';
+  });
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>(callbackError ? 'error' : 'idle');
+  const [errorMsg, setErrorMsg] = useState(callbackError);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
