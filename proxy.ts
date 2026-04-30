@@ -39,10 +39,21 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the session — getUser() is the Supabase-recommended server-side check.
-  // Do NOT use getSession() here: it can call _removeSession() on failure,
-  // which clears cookies and causes login loops.
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Self-healing: if the session is broken, clear all auth cookies server-side.
+  // JavaScript (document.cookie) can't clear httpOnly cookies — only the server can.
+  // Without this, stale cookies accumulate and cause login loops.
+  if (!user) {
+    const cookieOpts = local
+      ? { secure: false, path: '/' as const }
+      : { domain: '.tools.planetdetroit.org', sameSite: 'lax' as const, secure: true, path: '/' as const };
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith('sb-')) {
+        response.cookies.set(cookie.name, '', { ...cookieOpts, maxAge: 0 });
+      }
+    }
+  }
 
   return response;
 }
