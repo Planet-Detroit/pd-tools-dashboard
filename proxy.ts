@@ -31,7 +31,7 @@ export async function proxy(request: NextRequest) {
               ...options,
               ...(local
               ? { secure: false, path: '/' }
-              : { domain: '.tools.planetdetroit.org', sameSite: 'lax' as const, secure: true, httpOnly: true, path: '/' }),
+              : { domain: '.tools.planetdetroit.org', sameSite: 'lax' as const, secure: true, path: '/' }),
             });
           }
         },
@@ -39,8 +39,10 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Just refresh the session — updates the cookie if the token was refreshed
-  await supabase.auth.getSession();
+  // Refresh the session — getUser() is the Supabase-recommended server-side check.
+  // Do NOT use getSession() here: it can call _removeSession() on failure,
+  // which clears cookies and causes login loops.
+  await supabase.auth.getUser();
 
   return response;
 }
