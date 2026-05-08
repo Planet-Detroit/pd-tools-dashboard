@@ -8,7 +8,7 @@ function isLocalDev(request: NextRequest): boolean {
 // Proxy only refreshes the Supabase session cookie — it does NOT redirect.
 // Auth protection is handled client-side by the Dashboard component.
 // This avoids cookie/domain mismatch issues during development.
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/auth/callback')) {
     return NextResponse.next();
   }
